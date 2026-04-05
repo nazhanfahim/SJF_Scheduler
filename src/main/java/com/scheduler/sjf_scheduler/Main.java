@@ -1,4 +1,5 @@
 package com.scheduler.sjf_scheduler;
+
 import javafx.application.Application;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
@@ -41,6 +42,10 @@ public class Main extends Application {
     private TextField burstInput = new TextField();
     private ObservableList<Process> masterList = FXCollections.observableArrayList();
 
+    // NEW: Labels to display the averages
+    private Label avgWaitLabel = new Label("Average Waiting Time: 0.00");
+    private Label avgTurnaroundLabel = new Label("Average Turnaround Time: 0.00");
+
     @Override
     public void start(Stage stage) {
         stage.setTitle("SJF Scheduler (Non-Preemptive)");
@@ -59,6 +64,9 @@ public class Main extends Application {
         clearButton.setOnAction(e -> {
             masterList.clear();
             table.refresh();
+            // NEW: Reset labels when cleared
+            avgWaitLabel.setText("Average Waiting Time: 0.00");
+            avgTurnaroundLabel.setText("Average Turnaround Time: 0.00");
         });
 
         HBox inputGroup = new HBox(10, pidInput, burstInput, addButton, calculateButton, clearButton);
@@ -80,10 +88,15 @@ public class Main extends Application {
         table.getColumns().addAll(pidCol, burstCol, waitCol, tatCol);
         table.setItems(masterList);
 
-        VBox layout = new VBox(10, inputGroup, table);
+        // NEW: Group the labels together
+        HBox statsGroup = new HBox(20, avgWaitLabel, avgTurnaroundLabel);
+        statsGroup.setStyle("-fx-font-weight: bold; -fx-font-size: 14px;"); // Make them stand out a bit
+
+        // NEW: Add the statsGroup to the main layout
+        VBox layout = new VBox(10, inputGroup, table, statsGroup);
         layout.setPadding(new Insets(10));
 
-        Scene scene = new Scene(layout, 600, 400);
+        Scene scene = new Scene(layout, 600, 450); // Increased height slightly to fit labels
         stage.setScene(scene);
         stage.show();
     }
@@ -113,11 +126,29 @@ public class Main extends Application {
         sortedList.sort(Comparator.comparingInt(Process::getBurstTime));
 
         int currentWaitingTime = 0;
+
+        // NEW: Variables to track the totals
+        double totalWaitTime = 0;
+        double totalTurnaroundTime = 0;
+
         for (Process p : sortedList) {
             p.setWaitingTime(currentWaitingTime);
             p.setTurnaroundTime(currentWaitingTime + p.getBurstTime());
+
+            // NEW: Add to our running totals
+            totalWaitTime += p.getWaitingTime();
+            totalTurnaroundTime += p.getTurnaroundTime();
+
             currentWaitingTime += p.getBurstTime();
         }
+
+        // NEW: Calculate averages
+        double avgWait = totalWaitTime / sortedList.size();
+        double avgTurnaround = totalTurnaroundTime / sortedList.size();
+
+        // NEW: Update the UI labels (formatting to 2 decimal places)
+        avgWaitLabel.setText(String.format("Average Waiting Time: %.2f", avgWait));
+        avgTurnaroundLabel.setText(String.format("Average Turnaround Time: %.2f", avgTurnaround));
 
         // Update the table with sorted/calculated data
         masterList.setAll(sortedList);
